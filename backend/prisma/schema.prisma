@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  password       String?
+  name           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  oauth          Boolean   @default(false)
+  oauthProvider  String?
+  oauthId        String?
+  portfolios     Portfolio[]
+  riskProfile    RiskProfile?
+  financialGoals FinancialGoal[]
+  transactions   Transaction[]
+  notifications  Notification[]
+}
+
+model RiskProfile {
+  id                 String   @id @default(uuid())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String   @unique
+  riskTolerance      RiskTolerance
+  investmentHorizon  Int      // in years
+  ageRange           AgeRange
+  incomeRange        IncomeRange
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+enum RiskTolerance {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+}
+
+enum AgeRange {
+  UNDER_30
+  BETWEEN_30_AND_45
+  BETWEEN_45_AND_60
+  OVER_60
+}
+
+enum IncomeRange {
+  UNDER_50K
+  BETWEEN_50K_AND_100K
+  BETWEEN_100K_AND_200K
+  OVER_200K
+}
+
+model FinancialGoal {
+  id          String       @id @default(uuid())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  name        String
+  targetAmount Float
+  currentAmount Float       @default(0)
+  targetDate  DateTime
+  goalType    GoalType
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum GoalType {
+  RETIREMENT
+  HOUSE
+  EDUCATION
+  VACATION
+  EMERGENCY
+  OTHER
+}
+
+model Portfolio {
+  id           String       @id @default(uuid())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  name         String
+  description  String?
+  totalValue   Float        @default(0)
+  cash         Float        @default(0)
+  assets       Asset[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  transactions Transaction[]
+}
+
+model Asset {
+  id            String       @id @default(uuid())
+  portfolio     Portfolio    @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolioId   String
+  symbol        String
+  name          String
+  type          AssetType
+  quantity      Float
+  purchasePrice Float
+  currentPrice  Float
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  transactions  Transaction[]
+}
+
+enum AssetType {
+  STOCK
+  ETF
+  CRYPTO
+  BOND
+  CASH
+  OTHER
+}
+
+model Transaction {
+  id          String        @id @default(uuid())
+  user        User          @relation(fields: [userId], references: [id])
+  userId      String
+  portfolio   Portfolio     @relation(fields: [portfolioId], references: [id])
+  portfolioId String
+  asset       Asset?        @relation(fields: [assetId], references: [id])
+  assetId     String?
+  type        TransactionType
+  quantity    Float
+  price       Float
+  totalAmount Float
+  timestamp   DateTime      @default(now())
+  notes       String?
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  DEPOSIT
+  WITHDRAWAL
+  REBALANCE
+}
+
+model Notification {
+  id        String       @id @default(uuid())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  message   String
+  type      NotificationType
+  read      Boolean      @default(false)
+  createdAt DateTime     @default(now())
+}
+
+enum NotificationType {
+  ALERT
+  REBALANCE
+  MARKET
+  GOAL
+  SYSTEM
+}
+
+model MarketData {
+  id          String      @id @default(uuid())
+  symbol      String      @unique
+  name        String
+  lastPrice   Float
+  change      Float
+  changePercent Float
+  updatedAt   DateTime    @default(now())
+}
